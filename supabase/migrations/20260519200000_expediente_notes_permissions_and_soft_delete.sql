@@ -108,7 +108,17 @@ CREATE POLICY expediente_no_hard_delete
   TO authenticated
   USING (false);
 
--- 5) Audit trigger: reconocer RESTORE además del SOFT_DELETE existente.
+-- 5a) Permitir 'RESTORE' en el CHECK constraint de audit_log.
+ALTER TABLE public.audit_log DROP CONSTRAINT IF EXISTS audit_log_action_check;
+ALTER TABLE public.audit_log ADD CONSTRAINT audit_log_action_check
+  CHECK (action = ANY (ARRAY[
+    'INSERT'::text, 'UPDATE'::text, 'DELETE'::text,
+    'SOFT_DELETE'::text, 'RESTORE'::text,
+    'LOGIN'::text, 'LOGIN_FAIL'::text, 'LOGOUT'::text,
+    'SIGNUP'::text, 'PASSWORD_RESET'::text
+  ]));
+
+-- 5b) Audit trigger: reconocer RESTORE además del SOFT_DELETE existente.
 --    También fijamos search_path para cerrar la advertencia 0011 del linter.
 CREATE OR REPLACE FUNCTION public.audit_trigger_func()
 RETURNS trigger
